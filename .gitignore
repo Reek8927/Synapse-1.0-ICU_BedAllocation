@@ -1,0 +1,42 @@
+node_modules/
+.next/
+out/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+!.env.local.example
+*.log
+.DS_Store
+.vscode/
+.idea/
+.venv/
+__pycache__/
+*.py[cod]
+
+# BedAllocation ML raw public datasets, generated splits and model artifacts
+ml-service/.venv/
+ml-service/data/raw/*
+!ml-service/data/raw/.gitkeep
+ml-service/data/processed/*
+!ml-service/data/processed/.gitkeep
+ml-service/artifacts/*
+!ml-service/artifacts/.gitkeep
+
+# Corrected target experiment data and fitted research models
+ml-service/data/processed_onset/*
+!ml-service/data/processed_onset/.gitkeep
+ml-service/artifacts_onset/*
+!ml-service/artifacts_onset/.gitkeep
+
+# Local development API secrets (never commit)
+ml-service/.ml-api-key.local
+# Local development secrets
+.ml-api-key.local
+
+# Trained ML model files
+*.joblib
+*.pkl
+*.pickle
+/ml-service/data/mimic-iv raw/

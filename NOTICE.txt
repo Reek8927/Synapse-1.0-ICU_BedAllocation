@@ -1,0 +1,3 @@
+BedAllocation is a hackathon prototype for healthcare operations decision support.
+It is not clinically validated and must not independently diagnose patients or authorize ICU placement.
+Use synthetic data in development and demonstrations.

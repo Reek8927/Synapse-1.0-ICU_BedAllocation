@@ -1,0 +1,21 @@
+BYTE BRAINS - BEDALLOCATION PHASE 8 PATCH
+
+This patch adds a private, read-only research inference API, tests, model card, and setup documentation.
+
+SAFE APPLY
+1. Back up your current project folder.
+2. Extract this ZIP to a temporary folder.
+3. Copy/merge its contents into your existing BedAllocation-Rebuild project root, preserving paths.
+4. Replace the listed source/docs files when prompted.
+5. Do not remove or replace backend/.env, frontend/.env.local, .venv, data, artifacts, artifacts_onset, or your MongoDB database.
+
+RUN
+In a PowerShell terminal inside ml-service, with .venv activated:
+  python -m pip install -e ".[api,test]"
+  python -m unittest discover -s tests -v
+
+Then follow docs/phase-8-inference-api.md to set the local model/schema/metadata paths and a private API key, and start the API bound to 127.0.0.1:8001.
+
+The API is not yet connected to Express or the frontend. Do not expose the internal key to browser code, do not expose port 8001 publicly, and do not use scores for ICU priority or allocation.
+
+Model artifacts and dataset files are not included in this patch; the API expects the locally trained corrected-target artifact paths documented in ml-service/README.md.

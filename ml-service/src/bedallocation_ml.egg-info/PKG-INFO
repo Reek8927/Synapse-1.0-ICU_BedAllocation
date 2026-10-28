@@ -1,0 +1,21 @@
+Metadata-Version: 2.4
+Name: bedallocation-ml
+Version: 0.1.0
+Summary: Fresh ML development pipeline for the BedAllocation prototype
+Requires-Python: >=3.11
+Requires-Dist: numpy<3,>=1.26
+Requires-Dist: pandas<4,>=2.2.3
+Requires-Dist: scikit-learn<2,>=1.5
+Requires-Dist: joblib<2,>=1.4
+Provides-Extra: notebooks
+Requires-Dist: jupyterlab<5,>=4.2; extra == "notebooks"
+Requires-Dist: ipykernel<7,>=6.29; extra == "notebooks"
+Requires-Dist: matplotlib<4,>=3.8; extra == "notebooks"
+Provides-Extra: xgboost
+Requires-Dist: xgboost<4,>=2.1; extra == "xgboost"
+Provides-Extra: api
+Requires-Dist: fastapi<1,>=0.115; extra == "api"
+Requires-Dist: uvicorn<1,>=0.30; extra == "api"
+Provides-Extra: test
+Requires-Dist: httpx<1,>=0.27; extra == "test"
+Requires-Dist: httpx2<3,>=2.0.0; extra == "test"
