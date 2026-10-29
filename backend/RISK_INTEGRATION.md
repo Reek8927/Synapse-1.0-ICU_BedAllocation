@@ -28,3 +28,14 @@ POST /api/monitoring/vitals                   header X-Monitor-Key; push vitals 
 priority = 0.5 * ML score + 0.5 * min(NEWS2/10, 1) + small capped waiting-time bonus
 ICU recommended: NEWS2 >= 7, or ML >= 0.8, or (ML >= 0.5 and NEWS2 >= 5)
 Decision support only: a doctor confirms every allocation.
+
+## 6. Demo data
+npm run seed:demo            # creates "demo-hospital": 4 occupied ICU beds + 3 waiting patients (stable / borderline / critical)
+npm run seed:demo -- --reset # wipe and recreate
+
+## 7. Manual 8-minute flow (hackathon mode)
+1. npm run reminders:worker   -> existing worker raises an "observation due" reminder after 8 min (GET /api/icu/reminders)
+2. Nurse measures the patient and submits vitals:  POST /api/patients/:id/observations
+   (labs when available:                         POST /api/patients/:id/research-assessments)
+3. Both responses now include `risk` (riskLevel, icuRecommendation, priorityScore) and the ICU queue re-ranks immediately.
+4. GET /api/risk/queue rows include observationDue + minutesSinceObservation.

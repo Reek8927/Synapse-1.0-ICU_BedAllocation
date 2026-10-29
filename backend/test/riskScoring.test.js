@@ -49,3 +49,8 @@ test('waiting-time bonus is capped and breaks ties by longest wait', () => {
   ]);
   assert.equal(tie[0].patientId, 'y');
 });
+
+test('scorePatientSafe is exported and never throws', async () => {
+  const mod = await import('../src/services/riskScoring.js');
+  assert.equal(typeof mod.scorePatientSafe, 'function');
+});

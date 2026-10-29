@@ -180,6 +180,18 @@ export async function scorePatient({ tenantId, patientId, now = new Date(), env 
   return saved.toObject();
 }
 
+// Used after manual entries: never lets a scoring problem break the clinical record write.
+export async function scorePatientSafe({ tenantId, patientId }) {
+  try {
+    const s = await scorePatient({ tenantId, patientId });
+    if (!s) return null;
+    return {
+      riskLevel: s.riskLevel, icuRecommendation: s.icuRecommendation, priorityScore: s.priorityScore,
+      modelScore: s.modelScore, modelStatus: s.modelStatus, news2: s.news2, reasons: s.reasons, scoredAt: s.scoredAt,
+    };
+  } catch { return null; }
+}
+
 export async function getLatestScore({ tenantId, patientId }) {
   return PatientRiskScore.findOne({ tenantId, patientId }).sort({ scoredAt: -1 }).lean();
 }
@@ -196,7 +208,11 @@ export async function rankWaitingQueue({ tenantId, rescore = false, now = new Da
     if (!patient) continue;
     let score = rescore ? null : await getLatestScore({ tenantId, patientId: entry.patientId });
     if (!score) score = await scorePatient({ tenantId, patientId: entry.patientId, now, env, fetchImpl, enteredAt: entry.enteredAt });
+    const intervalMin = Number(env.ICU_REMINDER_INTERVAL_MINUTES) || 8;
+    const minutesSinceObservation = score.observationAt ? Math.floor((now.getTime() - new Date(score.observationAt).getTime()) / 60000) : null;
     rows.push({
+      observationDue: minutesSinceObservation === null || minutesSinceObservation >= intervalMin,
+      minutesSinceObservation,
       queueEntryId: entry._id.toString(), patientId: entry.patientId.toString(), enteredAt: entry.enteredAt,
       patient: { id: patient._id.toString(), fullName: patient.fullName, patientCode: patient.patientCode, wardName: patient.wardName },
       priorityScore: score.priorityScore, riskLevel: score.riskLevel, icuRecommendation: score.icuRecommendation,
