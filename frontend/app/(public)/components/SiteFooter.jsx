@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Logo from '../../_shared/Logo';
 
 export default function SiteFooter() {
   return (
@@ -6,8 +7,8 @@ export default function SiteFooter() {
       <div className="container footer-main">
         <div className="footer-brand-block">
           <Link className="brand brand-footer" href="/">
-            <span className="brand-mark" aria-hidden="true">BA</span>
-            <span className="brand-name">BedAllocation</span>
+            <span className="brand-mark" aria-hidden="true"><Logo /></span>
+            <span className="brand-name">CareQueue</span>
           </Link>
           <p>Hospital operations decision support, designed around transparent workflows and human oversight.</p>
         </div>
@@ -26,7 +27,7 @@ export default function SiteFooter() {
         </div>
       </div>
       <div className="container footer-bottom">
-        <span>© {new Date().getFullYear()} Byte Brains · BedAllocation</span>
+        <span>© {new Date().getFullYear()} Byte Brains · CareQueue</span>
         <span>Prototype only. Not clinically validated.</span>
       </div>
     </footer>

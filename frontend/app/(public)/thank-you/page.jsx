@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Inquiry Received',
-  description: 'Confirmation that a BedAllocation contact inquiry was received.',
+  description: 'Confirmation that a CareQueue contact inquiry was received.',
   robots: { index: false, follow: false, noarchive: true }
 };
 

@@ -1,28 +1,17 @@
+import '@fontsource/atkinson-hyperlegible/400.css';
+import '@fontsource/atkinson-hyperlegible/700.css';
 import './globals.css';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const tagline = 'ICU queue and bed coordination with live risk ranking.';
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
-  title: {
-    default: 'BedAllocation | Hospital Operations Decision Support',
-    template: '%s | BedAllocation'
-  },
-  description: 'A hospital operations platform for ICU queue coordination, bed readiness, accountable allocation recommendations and AI-assisted medical report processing.',
-  applicationName: 'BedAllocation',
-  openGraph: {
-    type: 'website',
-    siteName: 'BedAllocation',
-    title: 'BedAllocation | Hospital Operations Decision Support',
-    description: 'Coordinate ICU queues, bed readiness and accountable hospital workflows.',
-    images: [{ url: '/images/bedallocation-social.png', width: 1200, height: 630, alt: 'BedAllocation hospital operations platform' }]
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'BedAllocation | Hospital Operations Decision Support',
-    description: 'Coordinate ICU queues, bed readiness and accountable hospital workflows.',
-    images: ['/images/bedallocation-social.png']
-  },
+  title: { default: 'CareQueue | ICU queue and bed coordination', template: '%s | CareQueue' },
+  description: 'CareQueue helps nurses and doctors see which waiting patients need an ICU bed first, using live vitals, lab results and a risk model, with a clinician confirming every placement.',
+  applicationName: 'CareQueue',
+  openGraph: { type: 'website', siteName: 'CareQueue', title: 'CareQueue | ICU queue and bed coordination', description: tagline },
+  twitter: { card: 'summary', title: 'CareQueue', description: tagline },
   icons: { icon: '/favicon.svg' }
 };
 
