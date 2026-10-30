@@ -39,3 +39,10 @@ npm run seed:demo -- --reset # wipe and recreate
    (labs when available:                         POST /api/patients/:id/research-assessments)
 3. Both responses now include `risk` (riskLevel, icuRecommendation, priorityScore) and the ICU queue re-ranks immediately.
 4. GET /api/risk/queue rows include observationDue + minutesSinceObservation.
+
+## 8. All 40 model inputs
+- GET /api/risk/model-inputs returns the catalogue of the 40 inputs (label, unit, range, where it comes from).
+- POST /api/patients/:id/research-assessments still requires the 5 core labs and now also accepts 22 optional labs and icuUnitType (medical | surgical). Blank = not measured.
+- The newest recorded value of each lab (last 10 entries) is used when scoring.
+- Age, sex, MAP and time since admission are calculated. ICULOS stays blank until a patient is in an ICU bed.
+- Fixed: lactate is no longer multiplied by 9.009. The model's lactate is on the mmol/L scale (training median 1.83).

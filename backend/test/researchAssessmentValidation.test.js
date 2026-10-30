@@ -131,3 +131,18 @@ test('research assessment rejects non-finite numeric values', () => {
   }
 });
 
+
+test('research assessment accepts optional extra results and an ICU type, and rejects bad ones', async () => {
+  const { normalizeResearchAssessmentInput } = await import('../src/utils/patientValidation.js');
+  const base = { glucose: 100, lactate: 1.2, creatinine: 0.9, wbc: 8, platelets: 250 };
+  const ok = normalizeResearchAssessmentInput({ ...base, hct: '31.5', ph: 7.4, bilirubinTotal: 0.9, icuUnitType: 'medical' });
+  assert.equal(ok.hct, 31.5);
+  assert.equal(ok.ph, 7.4);
+  assert.equal(ok.icuUnitType, 'medical');
+  assert.ok(ok.fieldNames.includes('hct') && ok.fieldNames.includes('icuUnitType'));
+  const blank = normalizeResearchAssessmentInput({ ...base, hct: '', ph: null });
+  assert.equal(blank.hct, undefined);
+  assert.throws(() => normalizeResearchAssessmentInput({ ...base, ph: 9 }), /Blood pH/);
+  assert.throws(() => normalizeResearchAssessmentInput({ ...base, icuUnitType: 'burn' }), /ICU type/);
+  assert.throws(() => normalizeResearchAssessmentInput({ ...base, notAField: 1 }), /Unsupported assessment field/);
+});

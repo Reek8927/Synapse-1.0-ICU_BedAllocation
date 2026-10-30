@@ -32,6 +32,52 @@ const blankVitals = () => ({ observedAt: localNow(), temperatureC: '', heartRate
 const blankLabs = () => ({ glucose: '', lactate: '', creatinine: '', wbc: '', platelets: '', assessedAt: '', notes: '' });
 const show = (value, unit = '') => (value === null || value === undefined || value === '' ? 'Not recorded' : `${value}${unit}`);
 
+const WHERE = {
+  vitals: 'Add on the Vitals tab',
+  lab_core: 'Required on every lab entry',
+  lab_extra: 'Optional: Lab results, More lab results',
+};
+
+function groupInputs(inputs) {
+  const order = [];
+  const map = new Map();
+  inputs.forEach((item) => {
+    if (!map.has(item.group)) { map.set(item.group, []); order.push(item.group); }
+    map.get(item.group).push(item);
+  });
+  return order.map((group) => ({ group, items: map.get(group) }));
+}
+
+function InputsChecklist({ inputs, supplied }) {
+  const total = inputs.length || 40;
+  const have = inputs.filter((item) => supplied.has(item.key)).length;
+  return (
+    <details className="cq-inputs">
+      <summary>
+        <span><strong>Model inputs: {have} of {total} available</strong><span className="cq-who-meta"> · more inputs give a better-informed score</span></span>
+        <span className="cq-meter" aria-hidden="true"><span style={{ width: `${(have / total) * 100}%` }} /></span>
+      </summary>
+      <p className="cq-who-meta" style={{ margin: '10px 0 14px' }}>The model uses {total} inputs. Anything left blank is treated as “not measured”, never as normal. Enter what you have; you don’t need all {total}.</p>
+      {groupInputs(inputs).map(({ group, items }) => (
+        <section className="cq-input-group" key={group}>
+          <h3>{group} <span className="cq-who-meta">({items.filter((item) => supplied.has(item.key)).length}/{items.length})</span></h3>
+          <ul className="cq-input-list">
+            {items.map((item) => {
+              const ok = supplied.has(item.key);
+              return (
+                <li key={item.key} className={ok ? 'is-have' : 'is-missing'}>
+                  <span className="cq-input-mark" aria-hidden="true">{ok ? '✓' : '–'}</span>
+                  <span><span className="sr-only">{ok ? 'Available: ' : 'Missing: '}</span>{item.label}{!ok ? <small>{WHERE[item.source] || item.note}</small> : null}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </details>
+  );
+}
+
 export default function PatientRecordPage() {
   const { id } = useParams();
   const { api, can, csrfReady, refreshCounts } = useWorkspace();
@@ -43,6 +89,15 @@ export default function PatientRecordPage() {
   const [vitals, setVitals] = useState(blankVitals);
   const [labs, setLabs] = useState(blankLabs);
   const [queueReason, setQueueReason] = useState('');
+  const [inputs, setInputs] = useState([]);
+  const [extraLabs, setExtraLabs] = useState({});
+  const [icuUnitType, setIcuUnitType] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    api('/api/risk/model-inputs').then((data) => { if (active) setInputs(data.inputs || []); }).catch(() => {});
+    return () => { active = false; };
+  }, [api]);
 
   const loadRisk = useCallback(async () => {
     try { setRisk((await api(`/api/risk/patients/${encodeURIComponent(id)}`)).risk); } catch { setRisk(null); }
@@ -82,10 +137,12 @@ export default function PatientRecordPage() {
     event.preventDefault();
     return fb.run(async () => {
       const payload = { glucose: labs.glucose, lactate: labs.lactate, creatinine: labs.creatinine, wbc: labs.wbc, platelets: labs.platelets, notes: labs.notes };
+      Object.entries(extraLabs).forEach(([field, value]) => { if (value !== '') payload[field] = value; });
+      if (icuUnitType) payload.icuUnitType = icuUnitType;
       if (labs.assessedAt) payload.assessedAt = new Date(labs.assessedAt).toISOString();
       if (!payload.notes) delete payload.notes;
       const data = await api(`/api/patients/${encodeURIComponent(id)}/research-assessments`, { method: 'POST', body: JSON.stringify(payload) });
-      setLabs(blankLabs());
+      setLabs(blankLabs()); setExtraLabs({}); setIcuUnitType('');
       if (data.risk) setRisk(data.risk);
       await load();
       return data;
@@ -134,6 +191,8 @@ export default function PatientRecordPage() {
           </div>
         </section>
       ) : null}
+
+      {inputs.length ? <InputsChecklist inputs={inputs} supplied={new Set(risk?.suppliedFeatures || [])} /> : null}
 
       <div className="cq-facts">
         <div className="cq-fact"><span>Record number</span><strong>{show(patient.hospitalRecordNumber)}</strong></div>
@@ -203,8 +262,32 @@ export default function PatientRecordPage() {
                 <div className="cq-field" key={field.name}><label htmlFor={`l-${field.name}`}>{field.label}</label>
                   <input id={`l-${field.name}`} type="number" inputMode="decimal" min="0" max={field.max} step="any" value={labs[field.name]} onChange={(event) => setLabs({ ...labs, [field.name]: event.target.value })} required /></div>
               ))}
+              <details className="cq-more cq-field--wide">
+                <summary>More lab results (optional) <span className="cq-who-meta">· {Object.values(extraLabs).filter((value) => value !== '').length} of {inputs.filter((item) => item.source === 'lab_extra').length} entered</span></summary>
+                <p className="cq-who-meta" style={{ margin: '8px 0 14px' }}>Fill in only the tests that were actually run. Blank means not measured.</p>
+                {groupInputs(inputs.filter((item) => item.source === 'lab_extra')).map(({ group, items }) => (
+                  <fieldset className="cq-fieldset" key={group}>
+                    <legend>{group}</legend>
+                    <div className="cq-form">
+                      {items.map((item) => (
+                        <div className="cq-field" key={item.field}><label htmlFor={`x-${item.field}`}>{item.label}{item.unit ? ` (${item.unit})` : ''}</label>
+                          <input id={`x-${item.field}`} type="number" inputMode="decimal" min={item.min} max={item.max} step="any" value={extraLabs[item.field] ?? ''} onChange={(event) => setExtraLabs({ ...extraLabs, [item.field]: event.target.value })} /></div>
+                      ))}
+                    </div>
+                  </fieldset>
+                ))}
+                <fieldset className="cq-fieldset">
+                  <legend>Hospital context</legend>
+                  <div className="cq-form">
+                    <div className="cq-field"><label htmlFor="x-icu-type">Type of ICU this patient is waiting for</label>
+                      <select id="x-icu-type" value={icuUnitType} onChange={(event) => setIcuUnitType(event.target.value)}>
+                        <option value="">Not specified</option><option value="medical">Medical ICU</option><option value="surgical">Surgical ICU</option>
+                      </select></div>
+                  </div>
+                </fieldset>
+              </details>
               <div className="cq-field"><label htmlFor="l-time">Resulted at</label><input id="l-time" type="datetime-local" value={labs.assessedAt} onChange={(event) => setLabs({ ...labs, assessedAt: event.target.value })} /><small>Leave blank to use the current time.</small></div>
-              <div className="cq-field cq-field--wide"><label htmlFor="l-notes">Notes</label><textarea id="l-notes" value={labs.notes} onChange={(event) => setLabs({ ...labs, notes: event.target.value })} maxLength={2000} /><small>All five results are needed. Zero is a value, so don’t use it for a missing result.</small></div>
+              <div className="cq-field cq-field--wide"><label htmlFor="l-notes">Notes</label><textarea id="l-notes" value={labs.notes} onChange={(event) => setLabs({ ...labs, notes: event.target.value })} maxLength={2000} /><small>The five core results are required. Zero is a value, so don’t use it for a missing result.</small></div>
               <div className="cq-form-actions"><button className="cq-btn" type="submit" disabled={fb.busy || !csrfReady}>Save lab results</button></div>
             </form>
           ) : <p className="cq-notice cq-notice--info">Lab results can only be entered while a patient is on the ward or waiting for ICU.</p>}
@@ -216,11 +299,8 @@ export default function PatientRecordPage() {
                 <article className="cq-history-item" key={item.id}>
                   <div className="cq-history-head"><strong>{formatDateTime(item.assessedAt)}</strong><span>{item.recordedByName || 'Staff entry'}</span></div>
                   <div className="cq-values">
-                    <div><span>Glucose</span><strong>{show(item.glucose, ' mg/dL')}</strong></div>
-                    <div><span>Lactate</span><strong>{show(item.lactate, ' mmol/L')}</strong></div>
-                    <div><span>Creatinine</span><strong>{show(item.creatinine, ' mg/dL')}</strong></div>
-                    <div><span>White cells</span><strong>{show(item.wbc, ' 10⁹/L')}</strong></div>
-                    <div><span>Platelets</span><strong>{show(item.platelets, ' 10⁹/L')}</strong></div>
+                    {inputs.filter((def) => (def.source === 'lab_core' || def.source === 'lab_extra') && item[def.field] != null).map((def) => <div key={def.key}><span>{def.label}</span><strong>{show(item[def.field], def.unit ? ` ${def.unit}` : '')}</strong></div>)}
+                    {item.icuUnitType ? <div><span>ICU type</span><strong>{item.icuUnitType === 'medical' ? 'Medical ICU' : 'Surgical ICU'}</strong></div> : null}
                   </div>
                   {item.notes ? <p className="cq-who-meta" style={{ marginTop: 8 }}>{item.notes}</p> : null}
                 </article>

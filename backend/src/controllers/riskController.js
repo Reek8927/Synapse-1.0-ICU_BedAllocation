@@ -4,6 +4,7 @@ import Patient from '../models/Patient.js';
 import { tenantScopedFilter } from '../utils/tenantScope.js';
 import { getLatestScore, rankWaitingQueue, scorePatient } from '../services/riskScoring.js';
 import { confirmAllocation } from './icuController.js';
+import { describeModelInputs } from '../utils/modelInputs.js';
 
 const DISCLAIMER = 'Decision support only. A clinician must confirm every ICU admission and bed allocation.';
 
@@ -12,6 +13,7 @@ function serializeScore(score) {
   return {
     scoredAt: score.scoredAt, observationAt: score.observationAt, stale: score.stale,
     modelStatus: score.modelStatus, modelScore: score.modelScore, featuresSupplied: score.featuresSupplied,
+    suppliedFeatures: score.suppliedFeatures || [],
     news2: score.news2, priorityScore: score.priorityScore, riskLevel: score.riskLevel,
     icuRecommendation: score.icuRecommendation, reasons: score.reasons,
   };
@@ -84,4 +86,9 @@ export async function allocateNext(req, res, next) {
     req.mlRanked = true;
     return confirmAllocation(req, res, next);
   } catch (error) { return next(error); }
+}
+
+export function getModelInputs(req, res) {
+  res.set('Cache-Control', 'no-store');
+  return res.json({ inputs: describeModelInputs(), total: 40 });
 }

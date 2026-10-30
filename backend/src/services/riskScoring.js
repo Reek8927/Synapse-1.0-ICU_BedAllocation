@@ -4,9 +4,10 @@ import PatientResearchAssessment from '../models/PatientResearchAssessment.js';
 import PatientRiskScore from '../models/PatientRiskScore.js';
 import ICUQueueEntry from '../models/ICUQueueEntry.js';
 import { getResearchModelServiceConfig } from './researchModelStatus.js';
+import { CORE_LAB_INPUTS, EXTRA_LAB_INPUTS } from '../utils/modelInputs.js';
 
 const MODEL_TIMEOUT_MS = 5000;
-const LACTATE_MMOL_TO_MGDL = 9.009; // PhysioNet trains on lactate in mg/dL; the app stores mmol/L.
+const RECENT_ASSESSMENTS = 10; // lab results are sporadic, so the latest value of each lab is used
 
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
@@ -34,8 +35,8 @@ export function computeNews2(obs = {}) {
   return { score: used ? Object.values(parts).reduce((a, b) => a + b, 0) : null, parametersUsed: used, parts };
 }
 
-/* ---------- Model feature vector (PhysioNet names/units) ---------- */
-export function buildModelFeatures({ patient, observation, assessment, now = new Date() }) {
+/* ---------- Model feature vector (PhysioNet names/units, checked against the trained model) ---------- */
+export function buildModelFeatures({ patient, observation, assessment, assessments, now = new Date() }) {
   const f = {};
   const put = (k, v) => { const n = num(v); if (n !== null) f[k] = n; };
   if (observation) {
@@ -49,13 +50,17 @@ export function buildModelFeatures({ patient, observation, assessment, now = new
       f.MAP = Math.round(((observation.systolicBpMmhg + 2 * observation.diastolicBpMmhg) / 3) * 10) / 10;
     }
   }
-  if (assessment) {
-    put('Glucose', assessment.glucose);
-    put('Creatinine', assessment.creatinine);
-    put('WBC', assessment.wbc);
-    put('Platelets', assessment.platelets);
-    if (num(assessment.lactate) !== null) f.Lactate = Math.round(assessment.lactate * LACTATE_MMOL_TO_MGDL * 10) / 10;
+  // Newest first. Each lab takes its most recent recorded value.
+  const labSources = (assessments && assessments.length ? assessments : assessment ? [assessment] : []);
+  for (const item of [...CORE_LAB_INPUTS, ...EXTRA_LAB_INPUTS]) {
+    for (const source of labSources) {
+      if (num(source[item.field]) !== null) { f[item.key] = source[item.field]; break; }
+    }
   }
+  const unit = labSources.map((source) => source.icuUnitType).find(Boolean);
+  if (unit === 'medical') { f.Unit1 = 1; f.Unit2 = 0; }
+  if (unit === 'surgical') { f.Unit1 = 0; f.Unit2 = 1; }
+
   if (patient?.dateOfBirth) {
     const dob = new Date(patient.dateOfBirth);
     let years = now.getUTCFullYear() - dob.getUTCFullYear();
@@ -66,6 +71,11 @@ export function buildModelFeatures({ patient, observation, assessment, now = new
   }
   if (patient?.sexAtBirth === 'male') f.Gender = 1;
   else if (patient?.sexAtBirth === 'female') f.Gender = 0;
+  // The model's HospAdmTime is hours from hospital admission to ICU admission (negative). While waiting, "now" stands in for ICU admission.
+  if (patient?.admittedAt && patient.status !== 'icu_admitted') {
+    const hours = (now.getTime() - new Date(patient.admittedAt).getTime()) / 3600000;
+    if (hours >= 0) f.HospAdmTime = -Math.round(hours * 10) / 10;
+  }
   return f;
 }
 
@@ -149,12 +159,12 @@ export async function callModel(features, { env = process.env, fetchImpl = globa
 export async function scorePatient({ tenantId, patientId, now = new Date(), env = process.env, fetchImpl, enteredAt = null }) {
   const patient = await Patient.findOne({ _id: patientId, tenantId }).lean();
   if (!patient) return null;
-  const [observation, assessment] = await Promise.all([
+  const [observation, assessments] = await Promise.all([
     PatientObservation.findOne({ tenantId, patientId }).sort({ observedAt: -1 }).lean(),
-    PatientResearchAssessment.findOne({ tenantId, patientId }).sort({ assessedAt: -1 }).lean(),
+    PatientResearchAssessment.find({ tenantId, patientId }).sort({ assessedAt: -1 }).limit(RECENT_ASSESSMENTS).lean(),
   ]);
   const cfg = getRiskConfig(env);
-  const features = buildModelFeatures({ patient, observation, assessment, now });
+  const features = buildModelFeatures({ patient, observation, assessments, now });
   const news2 = computeNews2(observation || {});
 
   let model = { status: 'unavailable', score: null, modelKey: '', featuresSupplied: Object.keys(features).length };
@@ -173,6 +183,7 @@ export async function scorePatient({ tenantId, patientId, now = new Date(), env 
     tenantId, patientId, scoredAt: now,
     observationId: observation?._id ?? null, observationAt: observation?.observedAt ?? null, stale,
     modelStatus: model.status, modelKey: model.modelKey, modelScore: model.score, featuresSupplied: model.featuresSupplied,
+    suppliedFeatures: Object.keys(features),
     news2: news2.score, news2ParametersUsed: news2.parametersUsed,
     priorityScore: computePriorityScore({ modelScore: model.score, news2: news2.score, waitedMinutes }, cfg),
     riskLevel, icuRecommendation, reasons,
@@ -188,6 +199,7 @@ export async function scorePatientSafe({ tenantId, patientId }) {
     return {
       riskLevel: s.riskLevel, icuRecommendation: s.icuRecommendation, priorityScore: s.priorityScore,
       modelScore: s.modelScore, modelStatus: s.modelStatus, news2: s.news2, reasons: s.reasons, scoredAt: s.scoredAt,
+      suppliedFeatures: s.suppliedFeatures || [],
     };
   } catch { return null; }
 }

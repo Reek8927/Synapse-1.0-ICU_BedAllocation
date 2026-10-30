@@ -12,6 +12,7 @@ import { normalizeReminderIntervalMinutes } from '../utils/reminderTiming.js';
 import { isObservationFreshForReminder } from '../utils/observationFreshness.js';
 import { tenantScopedFilter } from '../utils/tenantScope.js';
 import { scorePatientSafe } from '../services/riskScoring.js';
+import { EXTRA_LAB_INPUTS } from '../utils/modelInputs.js';
 import { normalizeObservationInput, normalizePatientInput, normalizeResearchAssessmentInput, validationError } from '../utils/patientValidation.js';
 
 function serializePatient(patient) {
@@ -73,6 +74,11 @@ function serializeResearchAssessment(assessment) {
     wbcUnit: assessment.wbcUnit,
     platelets: assessment.platelets,
     plateletsUnit: assessment.plateletsUnit,
+    ...Object.fromEntries(
+      EXTRA_LAB_INPUTS.filter((item) => assessment[item.field] !== undefined && assessment[item.field] !== null)
+        .map((item) => [item.field, assessment[item.field]])
+    ),
+    icuUnitType: assessment.icuUnitType || null,
     notes: assessment.notes || '',
     createdAt: assessment.createdAt
   };

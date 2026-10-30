@@ -117,6 +117,8 @@ export function normalizeObservationInput(body, patientAdmittedAt = null) {
 
 
 
+import { EXTRA_LAB_INPUTS, ICU_UNIT_TYPES } from './modelInputs.js';
+
 const researchAssessmentRules = {
   glucose: {
     min: 0,
@@ -156,6 +158,8 @@ export function normalizeResearchAssessmentInput(
 
   const allowed = new Set([
     ...Object.keys(researchAssessmentRules),
+    ...EXTRA_LAB_INPUTS.map((item) => item.field),
+    'icuUnitType',
     'assessedAt',
     'notes'
   ]);
@@ -203,6 +207,37 @@ export function normalizeResearchAssessmentInput(
     output[field] = value;
   }
 
+  // Optional extra results: blank means "not measured".
+  const suppliedExtras = [];
+
+  for (const item of EXTRA_LAB_INPUTS) {
+    const raw = input[item.field];
+
+    if (raw === undefined || raw === null || (typeof raw === 'string' && !raw.trim())) {
+      continue;
+    }
+
+    const value = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : Number.NaN;
+
+    if (!Number.isFinite(value) || value < item.min || value > item.max) {
+      throw validationError(
+        `${item.label} (${item.unit || 'no unit'}) must be a number between ${item.min} and ${item.max}`
+      );
+    }
+
+    output[item.field] = value;
+    suppliedExtras.push(item.field);
+  }
+
+  if (input.icuUnitType !== undefined && input.icuUnitType !== null && input.icuUnitType !== '') {
+    if (!ICU_UNIT_TYPES.includes(input.icuUnitType)) {
+      throw validationError('ICU type must be medical or surgical');
+    }
+
+    output.icuUnitType = input.icuUnitType;
+    suppliedExtras.push('icuUnitType');
+  }
+
   output.notes = optionalTrimmed(
     input.notes,
     'Assessment notes',
@@ -240,6 +275,7 @@ export function normalizeResearchAssessmentInput(
   output.assessedAt = assessedAt;
   output.fieldNames = [
     ...Object.keys(researchAssessmentRules),
+    ...suppliedExtras,
     ...(output.notes ? ['notes'] : [])
   ];
 
