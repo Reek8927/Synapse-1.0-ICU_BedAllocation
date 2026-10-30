@@ -1,0 +1,80 @@
+{
+  "created_at_utc": "2026-10-10T15:08:34.336573+00:00",
+  "source_dataset": "PhysioNet/Computing in Cardiology Challenge 2019 raw training PSV files",
+  "source_columns_excluded_from_features": [
+    "SepsisLabel",
+    "patient_id"
+  ],
+  "feature_columns": [
+    "HR",
+    "O2Sat",
+    "Temp",
+    "SBP",
+    "MAP",
+    "DBP",
+    "Resp",
+    "EtCO2",
+    "BaseExcess",
+    "HCO3",
+    "FiO2",
+    "pH",
+    "PaCO2",
+    "SaO2",
+    "AST",
+    "BUN",
+    "Alkalinephos",
+    "Calcium",
+    "Chloride",
+    "Creatinine",
+    "Bilirubin_direct",
+    "Glucose",
+    "Lactate",
+    "Magnesium",
+    "Phosphate",
+    "Potassium",
+    "Bilirubin_total",
+    "TroponinI",
+    "Hct",
+    "Hgb",
+    "PTT",
+    "WBC",
+    "Fibrinogen",
+    "Platelets",
+    "Age",
+    "Gender",
+    "Unit1",
+    "Unit2",
+    "HospAdmTime",
+    "ICULOS"
+  ],
+  "target_column": "target_sepsis_onset_next_6h",
+  "target_definition": "1 if inferred annotated sepsis onset occurs in the next 1..6 hourly rows; otherwise 0. For sepsis patients, onset position is inferred as the first source SepsisLabel=1 row plus the documented 6-hour source-label shift. Rows at/after inferred onset are excluded. For non-sepsis patients, the final horizon rows are dropped because the future observation window is incomplete.",
+  "horizon_hours": 6,
+  "source_label_shift_hours": 6,
+  "random_state": 42,
+  "split_method": "stratified patient-level 70/15/15 split; a patient appears in only one split",
+  "patient_files_found": 40336,
+  "usable_patient_files": 40336,
+  "skipped_too_short_patient_files": 0,
+  "splits": {
+    "train": {
+      "patients": 28235,
+      "rows": 922067,
+      "positive_rows": 12289,
+      "positive_fraction": 0.01332766490938294
+    },
+    "validation": {
+      "patients": 6050,
+      "rows": 196281,
+      "positive_rows": 2631,
+      "positive_fraction": 0.013404252067189386
+    },
+    "test": {
+      "patients": 6051,
+      "rows": 199073,
+      "positive_rows": 2631,
+      "positive_fraction": 0.01321625735283037
+    }
+  },
+  "important_label_note": "The previous project target (any positive source SepsisLabel in the next six rows) was not appropriate for early-onset prediction because the source label remains positive after the annotated onset-minus-six-hour point. This corrected target infers the onset position from the first source-positive row plus six hours, labels only rows where onset is in the next horizon, and excludes post-onset rows. This remains a retrospective research target derived from a shifted label, not an ICU-admission model or clinically validated tool."
+}

@@ -1,0 +1,60 @@
+{
+  "created_at_utc": "2026-10-10T15:23:39.747407+00:00",
+  "feature_columns_in_order": [
+    "HR",
+    "O2Sat",
+    "Temp",
+    "SBP",
+    "MAP",
+    "DBP",
+    "Resp",
+    "EtCO2",
+    "BaseExcess",
+    "HCO3",
+    "FiO2",
+    "pH",
+    "PaCO2",
+    "SaO2",
+    "AST",
+    "BUN",
+    "Alkalinephos",
+    "Calcium",
+    "Chloride",
+    "Creatinine",
+    "Bilirubin_direct",
+    "Glucose",
+    "Lactate",
+    "Magnesium",
+    "Phosphate",
+    "Potassium",
+    "Bilirubin_total",
+    "TroponinI",
+    "Hct",
+    "Hgb",
+    "PTT",
+    "WBC",
+    "Fibrinogen",
+    "Platelets",
+    "Age",
+    "Gender",
+    "Unit1",
+    "Unit2",
+    "HospAdmTime",
+    "ICULOS"
+  ],
+  "target_column": "target_sepsis_onset_next_6h",
+  "target_definition": "1 if inferred annotated sepsis onset occurs in the next 1..6 hourly rows; otherwise 0. For sepsis patients, onset position is inferred as the first source SepsisLabel=1 row plus the documented 6-hour source-label shift. Rows at/after inferred onset are excluded. For non-sepsis patients, the final horizon rows are dropped because the future observation window is incomplete.",
+  "horizon_hours": 6,
+  "source_dataset": "PhysioNet/Computing in Cardiology Challenge 2019 raw training PSV files",
+  "models": {
+    "logistic_full_train": {
+      "model_file": "sepsis_onset_next_6h_logistic_full_train.joblib",
+      "model_type": "median imputation + missingness indicators + standard scaling + balanced logistic regression"
+    },
+    "hist_gradient_boosting": {
+      "model_file": "sepsis_onset_next_6h_hist_gradient_boosting.joblib",
+      "model_type": "median imputation + missingness indicators + balanced HistGradientBoostingClassifier (100 iterations)"
+    }
+  },
+  "clinical_status": "research experiment only; not clinically validated; not an ICU-admission model"
+}
