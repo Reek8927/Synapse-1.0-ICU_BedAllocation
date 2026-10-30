@@ -42,7 +42,7 @@ export default function LoginForm() {
       router.replace('/dashboard');
       router.refresh();
     } catch (reason) {
-      setError(reason.message || 'Unable to reach BedAllocation.');
+      setError(reason.message || 'Unable to reach CareQueue.');
     } finally {
       setBusy(false);
     }

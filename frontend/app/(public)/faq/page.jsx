@@ -2,18 +2,18 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Frequently Asked Questions',
-  description: 'Answers about BedAllocation, multi-hospital workspaces, ICU recommendations, medical report extraction, data security and the prototype limitations.',
+  description: 'Answers about CareQueue, multi-hospital workspaces, ICU recommendations, risk scoring, data security and the prototype limitations.',
   alternates: { canonical: '/faq' }
 };
 
 const faqs = [
-  ['What is BedAllocation?', 'BedAllocation is a hospital operations decision-support prototype for patient observation workflows, ICU queue coordination, bed readiness and traceable allocation recommendations.'],
+  ['What is CareQueue?', 'CareQueue is a hospital decision-support prototype. It ranks patients waiting for an ICU bed by risk, reminds staff to re-check vitals every eight minutes, and offers the next free bed to the highest-ranked patient for a clinician to confirm.'],
   ['Can multiple hospitals use the platform?', 'The platform is being designed as a multi-tenant SaaS application. Each hospital will have its own workspace and server-enforced access boundaries.'],
   ['Does the platform automatically admit a patient to ICU?', 'No. It can present recommendations based on the configured workflow, eligibility policy, bed readiness and available information. Final placement requires confirmation by authorized staff.'],
-  ['Can a report be uploaded as a photograph or PDF?', 'The planned document pipeline supports common image formats and PDFs, including scanned reports. Extraction may be uncertain, so staff must verify the extracted values against the original report.'],
+  ['How is a patient\'s risk calculated?', 'From the latest vitals and lab results. A machine-learning model trained on the public PhysioNet sepsis dataset gives a deterioration score, which is combined with an early-warning score such as NEWS2. The score is uncalibrated and is not a diagnosis.'],
   ['What happens when observations are missing or outdated?', 'The application should flag missing or stale observations. It must not invent readings or change physiological risk simply because time has passed.'],
-  ['Does the system connect to hospital monitors today?', 'No. The initial version uses manually entered observations and uploaded reports. Device and hospital-record integrations are future work and require appropriate authorization and security review.'],
-  ['Is BedAllocation clinically validated?', 'No. It is a hackathon decision-support prototype. Its prediction model, clinical policy and report extraction require appropriate evaluation and review before any real-world clinical use.'],
+  ['Does the system connect to hospital monitors today?', 'No. The current version uses manually entered observations and lab results, with a reminder every eight minutes. Device and hospital-record integrations are future work and require appropriate authorization and security review.'],
+  ['Is CareQueue clinically validated?', 'No. It is a hackathon decision-support prototype. Its prediction model and clinical policy require appropriate evaluation and review before any real-world clinical use.'],
   ['Should patient information be submitted through the public contact form?', 'No. Do not submit patient names, identifiers, medical reports, diagnoses or any other confidential clinical information through the public contact form.']
 ];
 

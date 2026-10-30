@@ -22,7 +22,7 @@ test('feature builder converts units and derives MAP/Age/Gender', () => {
   assert.equal(f.MAP, 80);
   assert.equal(f.Age, 50);
   assert.equal(f.Gender, 1);
-  assert.equal(f.Lactate, 18); // 2 mmol/L -> mg/dL
+  assert.equal(f.Lactate, 2); // the model was trained on mmol/L-scale lactate (median 1.83), so no conversion
   assert.equal(f.HR, 100);
 });
 
@@ -48,4 +48,38 @@ test('waiting-time bonus is capped and breaks ties by longest wait', () => {
     { patientId: 'y', priorityScore: 0.5, enteredAt: '2026-10-30T09:00:00Z' },
   ]);
   assert.equal(tie[0].patientId, 'y');
+});
+
+test('scorePatientSafe is exported and never throws', async () => {
+  const mod = await import('../src/services/riskScoring.js');
+  assert.equal(typeof mod.scorePatientSafe, 'function');
+});
+
+test('feature builder uses the newest value of each lab, the extra labs, ICU type and admission time', () => {
+  const now = new Date('2026-10-30T12:00:00Z');
+  const f = buildModelFeatures({
+    now,
+    patient: { dateOfBirth: new Date('1976-01-01'), sexAtBirth: 'female', status: 'icu_waiting', admittedAt: new Date('2026-10-29T12:00:00Z') },
+    observation: { heartRateBpm: 90 },
+    assessments: [
+      { glucose: 150, lactate: 2.5, creatinine: 1, wbc: 9, platelets: 200, hct: 31, icuUnitType: 'surgical' },
+      { glucose: 99, lactate: 1, creatinine: 1, wbc: 9, platelets: 200, hgb: 10.5, ph: 7.4 },
+    ],
+  });
+  assert.equal(f.Glucose, 150);   // newest wins
+  assert.equal(f.Hct, 31);
+  assert.equal(f.Hgb, 10.5);      // older entry fills a lab the newest one left blank
+  assert.equal(f.pH, 7.4);
+  assert.equal(f.Unit2, 1);
+  assert.equal(f.Unit1, 0);
+  assert.equal(f.Gender, 0);
+  assert.equal(f.HospAdmTime, -24);
+  assert.equal(f.ICULOS, undefined);
+});
+
+test('model input catalogue covers all 40 model features exactly once', async () => {
+  const { MODEL_INPUTS } = await import('../src/utils/modelInputs.js');
+  const expected = ['HR','O2Sat','Temp','SBP','MAP','DBP','Resp','EtCO2','BaseExcess','HCO3','FiO2','pH','PaCO2','SaO2','AST','BUN','Alkalinephos','Calcium','Chloride','Creatinine','Bilirubin_direct','Glucose','Lactate','Magnesium','Phosphate','Potassium','Bilirubin_total','TroponinI','Hct','Hgb','PTT','WBC','Fibrinogen','Platelets','Age','Gender','Unit1','Unit2','HospAdmTime','ICULOS'];
+  assert.deepEqual([...MODEL_INPUTS.map((i) => i.key)].sort(), [...expected].sort());
+  assert.equal(new Set(MODEL_INPUTS.map((i) => i.field).filter(Boolean)).size, MODEL_INPUTS.filter((i) => i.field).length);
 });

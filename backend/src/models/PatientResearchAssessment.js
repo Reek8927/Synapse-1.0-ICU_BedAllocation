@@ -1,5 +1,6 @@
 
 import mongoose from 'mongoose';
+import { EXTRA_LAB_INPUTS, ICU_UNIT_TYPES } from '../utils/modelInputs.js';
 
 const patientResearchAssessmentSchema = new mongoose.Schema({
   tenantId: {
@@ -108,6 +109,14 @@ const patientResearchAssessmentSchema = new mongoose.Schema({
   timestamps: true,
   versionKey: false
 });
+
+// Optional extra results (all 40 model inputs can be recorded). Blank means not measured.
+const optionalLabFields = {};
+for (const item of EXTRA_LAB_INPUTS) {
+  optionalLabFields[item.field] = { type: Number, min: item.min, max: item.max, default: undefined };
+}
+optionalLabFields.icuUnitType = { type: String, enum: ICU_UNIT_TYPES, default: undefined };
+patientResearchAssessmentSchema.add(optionalLabFields);
 
 patientResearchAssessmentSchema.index(
   { tenantId: 1, patientId: 1, assessedAt: -1 },

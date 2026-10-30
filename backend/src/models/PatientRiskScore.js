@@ -12,6 +12,7 @@ const patientRiskScoreSchema = new mongoose.Schema({
   modelKey: { type: String, default: '' },
   modelScore: { type: Number, min: 0, max: 1, default: null },
   featuresSupplied: { type: Number, default: 0 },
+  suppliedFeatures: { type: [String], default: [] },
   news2: { type: Number, default: null },
   news2ParametersUsed: { type: Number, default: 0 },
   priorityScore: { type: Number, required: true },

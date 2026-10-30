@@ -11,6 +11,8 @@ import { supersedePendingPatientReminders } from '../services/icuReminderLifecyc
 import { normalizeReminderIntervalMinutes } from '../utils/reminderTiming.js';
 import { isObservationFreshForReminder } from '../utils/observationFreshness.js';
 import { tenantScopedFilter } from '../utils/tenantScope.js';
+import { scorePatientSafe } from '../services/riskScoring.js';
+import { EXTRA_LAB_INPUTS } from '../utils/modelInputs.js';
 import { normalizeObservationInput, normalizePatientInput, normalizeResearchAssessmentInput, validationError } from '../utils/patientValidation.js';
 
 function serializePatient(patient) {
@@ -72,6 +74,11 @@ function serializeResearchAssessment(assessment) {
     wbcUnit: assessment.wbcUnit,
     platelets: assessment.platelets,
     plateletsUnit: assessment.plateletsUnit,
+    ...Object.fromEntries(
+      EXTRA_LAB_INPUTS.filter((item) => assessment[item.field] !== undefined && assessment[item.field] !== null)
+        .map((item) => [item.field, assessment[item.field]])
+    ),
+    icuUnitType: assessment.icuUnitType || null,
     notes: assessment.notes || '',
     createdAt: assessment.createdAt
   };
@@ -327,7 +334,9 @@ export async function createObservation(req, res, next) {
       });
       created = observation;
     });
-    return res.status(201).json({ observation: serializeObservation(created) });
+    // Fresh manual vitals -> re-score immediately so the ICU queue ranking updates.
+    const risk = await scorePatientSafe({ tenantId: req.tenantId, patientId });
+    return res.status(201).json({ observation: serializeObservation(created), risk });
   } catch (error) { return next(error); }
   finally { await session?.endSession(); }
 }
@@ -404,8 +413,10 @@ export async function createResearchAssessment(req, res, next) {
       created = assessment.toObject();
     });
 
+    const risk = await scorePatientSafe({ tenantId: req.tenantId, patientId });
     return res.status(201).json({
-      researchAssessment: serializeResearchAssessment(created)
+      researchAssessment: serializeResearchAssessment(created),
+      risk
     });
   } catch (error) {
     return next(error);

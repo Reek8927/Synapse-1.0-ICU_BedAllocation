@@ -17,6 +17,7 @@ import AuditEvent from '../models/AuditEvent.js';
 
 const SLUG = 'demo-hospital';
 const EMAIL = 'doctor@demo.hospital';
+const NURSE_EMAIL = 'nurse@demo.hospital';
 const PASSWORD = process.env.DEMO_PASSWORD || 'DemoHospital#2026!';
 const reset = process.argv.includes('--reset');
 const yearsAgo = (y) => new Date(Date.now() - y * 365.25 * 864e5);
@@ -58,6 +59,7 @@ async function main() {
   const tenant = await Tenant.create({ name: 'Demo Hospital', slug: SLUG });
   const tenantId = tenant._id;
   const doctor = await User.create({ tenantId, name: 'Dr. Demo', email: EMAIL, passwordHash: await bcrypt.hash(PASSWORD, 10), role: 'doctor' });
+  await User.create({ tenantId, name: 'Nurse Demo', email: NURSE_EMAIL, passwordHash: await bcrypt.hash(PASSWORD, 10), role: 'nurse' });
   const base = { tenantId, createdByUserId: doctor._id, updatedByUserId: doctor._id, wardName: 'General Ward' };
 
   // 4 occupied beds
@@ -91,6 +93,7 @@ async function main() {
   console.log('\nDemo hospital created.\n');
   console.log(`tenantId : ${tenantId}`);
   console.log(`login    : POST /api/auth/login  { "email": "${EMAIL}", "password": "${PASSWORD}", "tenantSlug": "${SLUG}" }`);
+  console.log(`nurse    : same login with "email": "${NURSE_EMAIL}" (marks cleaned beds ready; doctors cannot)`);
   console.log('beds     : ICU-1..ICU-4 (all occupied by A-001..A-004)');
   console.log('waiting  : W-001 (stable), W-002 (borderline), W-003 (critical)');
   console.log(`\nSimulate the 8-minute monitor feed (10 s on stage):\n  npm run simulate:vitals -- --tenant ${tenantId} --patients W-001,W-002,W-003 --interval 10 --worsen W-001\n`);

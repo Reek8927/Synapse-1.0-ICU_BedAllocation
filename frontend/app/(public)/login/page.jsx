@@ -2,7 +2,7 @@ import LoginForm from '../components/LoginForm';
 
 export const metadata = {
   title: 'Staff Sign In',
-  description: 'Secure sign-in for authorized BedAllocation hospital and platform users.',
+  description: 'Secure sign-in for authorized CareQueue hospital and platform users.',
   robots: { index: false, follow: false },
   alternates: { canonical: '/login' }
 };
